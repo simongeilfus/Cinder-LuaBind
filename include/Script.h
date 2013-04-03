@@ -35,7 +35,7 @@ namespace lua {
 		bool functionExists( const std::string& function );
         
         template<typename T, typename... Args>
-        T call( const std::string& function, Args... args )
+        T call( const std::string& function, const Args&... args )
         {
             T result;
             
@@ -44,8 +44,9 @@ namespace lua {
             
             try{
                 result = luabind::call_function<T>( mState, function.c_str(), args... );
+                mErrors = false;
             }
-            catch( luabind::error error ){
+            catch( ... ){
                 mErrors = true;
                 mLastErrorString = getErrorMessage();
                 std::cout << "Lua Error trying to call " << function << " : " << std::endl << mLastErrorString << std::endl;
@@ -53,33 +54,27 @@ namespace lua {
             return result;
         }
         
+        
         template<typename... Args>
-        void call( const std::string& function, Args... args )
+        void call( const std::string& function, const Args&... args )
         {
             if( !functionExists( function ) || ( mStopOnErrors && mErrors ) )
                 return;
             
             try{
-                luabind::call_function<void>( mState, function.c_str(), args... );
+                // luabind::call_function<void> doesn't seem to catch exception
+                // this is a stupid fix...
+                void* res = luabind::call_function<void*>( mState, function.c_str(), args... );
+                mErrors = false;
             }
-            catch( luabind::error error ){
+            catch( ... ){
                 mErrors = true;
                 mLastErrorString = getErrorMessage();
                 std::cout << "Lua Error trying to call " << function << " : " << std::endl << mLastErrorString << std::endl;
             }
         }
-		
-		void setup();
-		void update();
-		void draw();
-
-		void mouseDown( ci::app::MouseEvent event );
-		void mouseUp( ci::app::MouseEvent event );
-		void mouseMove( ci::app::MouseEvent event );
-		void mouseDrag( ci::app::MouseEvent event );
-		void mouseWheel( ci::app::MouseEvent event );
-		void keyDown( ci::app::KeyEvent event );
-		void keyUp( ci::app::KeyEvent event );
+        
+        lua_State* getState(){ return mState; }
 
 	private:
         static int panic( lua_State* L );

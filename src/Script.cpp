@@ -9,6 +9,9 @@ extern "C" {
 }
 
 #include <luabind/class_info.hpp>
+#include <luabind/exception_handler.hpp>
+
+
 
 
 using namespace ci;
@@ -17,6 +20,14 @@ using namespace std;
 using namespace luabind;
 
 namespace lua {
+    
+    struct my_exception {};
+    
+    void translate_my_exception(lua_State* L, my_exception const&)
+    {
+       // lua_pushstring(L, "my_exception");
+        cout << "cest bien ca" << endl;
+    }
     
 	void State::create( bool bindAll ){
 		mInstance = new State();
@@ -32,6 +43,7 @@ namespace lua {
 		lua_atpanic( mInstance->mState, &State::panic );
         
 		luabind::open( mInstance->mState );
+        luabind::register_exception_handler<my_exception>(&translate_my_exception);
         
 		if( mInstance->mBindAll ){
 			Bindings::bindStd( mInstance->mState );
@@ -63,6 +75,24 @@ namespace lua {
 		return 0;
 	}
     
+    class WTF : public std::exception {
+        public :
+		virtual const char* what() const throw() { return "unable to make cast"; }
+    };
+    
+	int errorHandling( lua_State *L ) {
+		//app::console() << "LuaPanic: " <<  lua_tostring( L, -1 ) << endl;
+        //throw luabind::error(L);
+        
+        bool mErrors = ( lua_pcall( L, 0, 0, 0 ) != 0 );
+        if( mErrors ){
+            string mLastErrorString = (std::string) lua_tostring( L, -1 );
+            std::cout << "WTF " << std::endl;
+        }
+       // throw WTF();
+		return 0;
+	}
+    
     
 	State* State::mInstance = NULL;
     
@@ -74,7 +104,7 @@ namespace lua {
     }
     
 	Script::Script( bool bindAll, bool useLuaThread ){
-		mStopOnErrors	= false;
+		mStopOnErrors	= true;
 		mErrors			= false;
         
         if( useLuaThread ) {
@@ -99,6 +129,8 @@ namespace lua {
             }
         }
         
+        //luabind::register_exception_handler<my_exception>(&translate_my_exception);
+       // luabind::set_pcall_callback( &errorHandling );
         lua_atpanic( mState, &panic);
 	}
 	Script::~Script(){
@@ -143,9 +175,8 @@ namespace lua {
             return;
         }
         else mErrors = false;
-        
-        
-		setup();
+                
+		call( "setup" );
 	}
     
 	void Script::addClassSupport(){
@@ -177,34 +208,4 @@ namespace lua {
 		return false;
 	}
 
-	void Script::setup(){
-		call( "setup" );
-	}
-	void Script::update(){
-		call( "update" );
-	}
-	void Script::draw(){
-		call( "draw" );
-	}
-	void Script::mouseDown( MouseEvent event ){
-		call( "mouseDown", event );
-	}
-	void Script::mouseUp( MouseEvent event ){
-		call( "mouseUp", event );
-	}
-	void Script::mouseMove( MouseEvent event ){
-		call( "mouseMove", event );
-	}
-	void Script::mouseDrag( MouseEvent event ){
-		call( "mouseDrag", event );
-	}
-	void Script::mouseWheel( MouseEvent event ){
-		call( "mouseWheel", event );
-	}
-	void Script::keyDown( KeyEvent event ) {
-		call( "keyDown", event );
-	}
-	void Script::keyUp( KeyEvent event ) {
-		call( "keyUp", event );
-	}
 };
