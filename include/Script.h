@@ -24,13 +24,15 @@ namespace lua {
     
 	class Script {
 	public:
-		Script( bool bindAll = true, bool useLuaThread = true );
+		Script( bool bindAll = true, bool useLuaThread = false );
 		~Script();
         
 		void loadString( const std::string& script );
 		void loadFile( ci::DataSourceRef source );
         
 		std::string getLastErrors();
+        
+        void gc();
         
 		bool functionExists( const std::string& function );
         

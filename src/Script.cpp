@@ -129,11 +129,16 @@ namespace lua {
             }
         }
         
+		//addClassSupport();
+        
         //luabind::register_exception_handler<my_exception>(&translate_my_exception);
        // luabind::set_pcall_callback( &errorHandling );
         lua_atpanic( mState, &panic);
 	}
 	Script::~Script(){
+        gc();
+        
+		lua_close( mState );
 	}
     
     std::string Script::getErrorMessage()
@@ -153,7 +158,7 @@ namespace lua {
     }
 	
 	void Script::loadString( const std::string& script ){
-		addClassSupport();
+        gc();
         
         mLastErrorString = "";
         
@@ -177,6 +182,12 @@ namespace lua {
         else mErrors = false;
                 
 		call( "setup" );
+	}
+    
+    
+	void Script::gc()
+	{
+		lua_gc( mState, LUA_GCCOLLECT, 0 );
 	}
     
 	void Script::addClassSupport(){
